@@ -26,7 +26,7 @@ int lives = 5;
 const char *quitMessages[] = {
 	"You cant leave from this level, <cy>you must beat it!</c>",
 	"You cant leave from this level, <cy>you must beat it!</c>",
-	"You cant leave from this level, <cy>you must beat it!</c>"
+	"You cant leave from this level, <cy>you must beat it!</c>",
 	"<cr>Stop doing this!</c> Else you will get <cr>BsoD</c> here...",
 	"You cant understand it?",
 	"bruh",
@@ -150,10 +150,10 @@ namespace PlayLayer {
 
 	void __fastcall PlayLayer::onQuitHook(gd::PlayLayer* self, void*) {
 		if (!canleft) {
-			if(countleft < 6){
+			if(countleft < 8){
 				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, quitMessages[countleft - 1])->show();
 				countleft++;
-			} else (countleft == 6) {
+			} else {
 				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, quitMessages[countleft - 1])->show();
 				CallBsod(false);
 			}
