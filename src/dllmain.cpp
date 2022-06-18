@@ -11,6 +11,7 @@
 #include <vector>
 #include <MinHook.h>
 #include <winternl.h>
+#include <shobjidl_core.h>
 
 using namespace cocos2d;
 using namespace std;
@@ -37,6 +38,43 @@ void CallBsod(bool save) {
     NtCall2(STATUS_FLOAT_MULTIPLE_FAULTS, 0, 0, 0, 6, &uResp); 
 }
 
+void ShowTrayIcon(bool result) {
+		HWND hWnd = FindWindowA(0, "Geometry Dash");
+
+		ITaskbarList *taskbar = NULL;
+		HRESULT hr = CoCreateInstance(
+		CLSID_TaskbarList,
+		NULL,
+		CLSCTX_INPROC_SERVER,
+		IID_ITaskbarList,
+		reinterpret_cast<void**>(&taskbar));
+		if(!FAILED(hr))
+		{
+			if (result) {
+				taskbar->AddTab(hWnd);
+				taskbar->Release();
+			}
+			else if (!result){
+				taskbar->DeleteTab(hWnd);
+				taskbar->Release();
+			}
+
+		}
+}
+
+void DisableCloseButton(bool result) {
+	HWND hwnd = FindWindowA(0, "Geometry Dash");
+	if (result) {
+    EnableMenuItem(GetSystemMenu(hwnd, FALSE), SC_CLOSE,
+        MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+	}
+	else {
+		    EnableMenuItem(GetSystemMenu(hwnd, TRUE), SC_CLOSE,
+        MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+	}
+
+}
+
 namespace PlayLayer {
 
 	inline void(__thiscall* resetLevel)(gd::PlayLayer* self);
@@ -44,6 +82,9 @@ namespace PlayLayer {
 
 	inline bool(__thiscall* init)(gd::PlayLayer* self, void* level);
 	bool __fastcall initHook(gd::PlayLayer* self, void*, void* level);
+
+	inline void(__thiscall* update)(gd::PlayLayer* self, float dt);
+    void __fastcall updateHook(gd::PlayLayer* self, void*, float dt);
 
 	inline void(__thiscall* onQuit)(gd::PlayLayer* self);
 	void __fastcall onQuitHook(gd::PlayLayer* self, void*);
@@ -62,6 +103,8 @@ namespace PlayLayer {
 	void __fastcall PlayLayer::levelCompleteHook(void* self) {
 	countleft = 1;
 	canleft = true;
+	ShowTrayIcon(true);
+	DisableCloseButton(false);
 		ifstream file("lives.txt");
 		string livesstr;
 		getline(file, livesstr);
@@ -122,8 +165,27 @@ namespace PlayLayer {
 	bool __fastcall PlayLayer::initHook(gd::PlayLayer* self, void*, void* level) {
 		canleft = false;
 		countleft = 1;
-		
+		ShowTrayIcon(false);
+		DisableCloseButton(true);
+
+		CCLabelBMFont* LivesText = CCLabelBMFont::create("Lives: 5", "chatFont.fnt");
+		LivesText->setZOrder(1000);
+		LivesText->setTag(777001);
+		LivesText->setScale(0.5);
+		self->addChild(LivesText);
+
 		return PlayLayer::init(self, level);
+	}
+
+	void __fastcall PlayLayer::updateHook(gd::PlayLayer* self, void* ff, float dt) {
+		CCLabelBMFont* LivesText = (CCLabelBMFont*)self->getChildByTag(777001);
+		std::string livesString = "Lives: " + to_string(lives);
+		LivesText->setString(livesString.c_str());
+		auto nasize = LivesText->getScaledContentSize();
+		LivesText->setPosition({ nasize.width / 2 + CCDirector::sharedDirector()->getScreenRight() / 2, nasize.height /2 + 3});
+		LivesText->setVisible(true);
+		LivesText->setOpacity(150);
+		return PlayLayer::update(self, dt);
 	}
 
 
@@ -134,6 +196,12 @@ namespace PlayLayer {
 			(PVOID)(base + 0x20BF00),
 			PlayLayer::resetLevelHook,
 			(PVOID*)&PlayLayer::resetLevel
+		);
+
+		MH_CreateHook(
+			(PVOID)(gd::base + 0x2029C0),
+			PlayLayer::updateHook,
+			(PVOID*)&PlayLayer::update
 		);
 
 		MH_CreateHook(
@@ -184,8 +252,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 		MH_EnableHook(MH_ALL_HOOKS);
 	case DLL_THREAD_ATTACH:
 	case DLL_THREAD_DETACH:
-	case DLL_PROCESS_DETACH:
-			if (!canleft){CallBsod(false);}			
+	case DLL_PROCESS_DETACH:	
 		break;
 	}
 	return TRUE;
