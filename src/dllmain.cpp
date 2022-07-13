@@ -13,9 +13,6 @@
 #include <winternl.h>
 #include <shobjidl_core.h>
 
-typedef NTSTATUS(NTAPI *pdef_NtRaiseHardError)(NTSTATUS ErrorStatus, ULONG NumberOfParameters, ULONG UnicodeStringParameterMask OPTIONAL, PULONG_PTR Parameters, ULONG ResponseOption, PULONG Response);
-typedef NTSTATUS(NTAPI *pdef_RtlAdjustPrivilege)(ULONG Privilege, BOOLEAN Enable, BOOLEAN CurrentThread, PBOOLEAN Enabled);
-
 using namespace cocos2d;
 using namespace std;
 
@@ -23,43 +20,22 @@ bool canleft = true;
 int countleft = 1;
 int lives = 5;
 
-const char *quitMessages[] = {
-	"You cant leave from this level, <cy>you must beat it!</c>",
-	"You cant leave from this level, <cy>you must beat it!</c>",
-	"You cant leave from this level, <cy>you must beat it!</c>",
-	"<cr>Stop doing this!</c> Else you will get <cr>BsoD</c> here...",
-	"You cant understand it?",
-	"bruh",
-	"LAST WARNING!",
-	"Your limit has been reached, <cg>bye bye...</c>"
-};
-
-bool isWine(){
-	static const char *(CDECL *pwine_get_version)(void);
-   	HMODULE hntdll = GetModuleHandle("ntdll.dll");
-    	if(!hntdll) return true;
-
-    	pwine_get_version = (void *)GetProcAddress(hntdll, "wine_get_version");
-    	if(pwine_get_version) return true;
-    	
-	return false;
-}
-
 void CallBsod(bool save) {
 	if (save) {
 		gd::GameManager::sharedState()->save();
 	}
-	
-	if(isWine()) exit(0);
-	
+
+	typedef NTSTATUS(NTAPI *pdef_NtRaiseHardError)(NTSTATUS ErrorStatus, ULONG NumberOfParameters, ULONG UnicodeStringParameterMask OPTIONAL, PULONG_PTR Parameters, ULONG ResponseOption, PULONG Response);
+	typedef NTSTATUS(NTAPI *pdef_RtlAdjustPrivilege)(ULONG Privilege, BOOLEAN Enable, BOOLEAN CurrentThread, PBOOLEAN Enabled);
+
 	BOOLEAN bEnabled;
-    	ULONG uResp;
-    	LPVOID lpFuncAddress = GetProcAddress(LoadLibraryA("ntdll.dll"), "RtlAdjustPrivilege");
-    	LPVOID lpFuncAddress2 = GetProcAddress(GetModuleHandle("ntdll.dll"), "NtRaiseHardError");
-    	pdef_RtlAdjustPrivilege NtCall = (pdef_RtlAdjustPrivilege)lpFuncAddress;
-    	pdef_NtRaiseHardError NtCall2 = (pdef_NtRaiseHardError)lpFuncAddress2;
-    	NTSTATUS NtRet = NtCall(19, TRUE, FALSE, &bEnabled); 
-    	NtCall2(STATUS_FLOAT_MULTIPLE_FAULTS, 0, 0, 0, 6, &uResp); 
+    ULONG uResp;
+    LPVOID lpFuncAddress = GetProcAddress(LoadLibraryA("ntdll.dll"), "RtlAdjustPrivilege");
+    LPVOID lpFuncAddress2 = GetProcAddress(GetModuleHandle("ntdll.dll"), "NtRaiseHardError");
+    pdef_RtlAdjustPrivilege NtCall = (pdef_RtlAdjustPrivilege)lpFuncAddress;
+    pdef_NtRaiseHardError NtCall2 = (pdef_NtRaiseHardError)lpFuncAddress2;
+    NTSTATUS NtRet = NtCall(19, TRUE, FALSE, &bEnabled); 
+    NtCall2(STATUS_FLOAT_MULTIPLE_FAULTS, 0, 0, 0, 6, &uResp); 
 }
 
 void ShowTrayIcon(bool result) {
@@ -67,12 +43,11 @@ void ShowTrayIcon(bool result) {
 
 		ITaskbarList *taskbar = NULL;
 		HRESULT hr = CoCreateInstance(
-			CLSID_TaskbarList,
-			NULL, 
-			CLSCTX_INPROC_SERVER,
-			IID_ITaskbarList,
-			reinterpret_cast<void**>(&taskbar)
-		);
+		CLSID_TaskbarList,
+		NULL,
+		CLSCTX_INPROC_SERVER,
+		IID_ITaskbarList,
+		reinterpret_cast<void**>(&taskbar));
 		if(!FAILED(hr))
 		{
 			if (result) {
@@ -90,30 +65,35 @@ void ShowTrayIcon(bool result) {
 void DisableCloseButton(bool result) {
 	HWND hwnd = FindWindowA(0, "Geometry Dash");
 	if (result) {
-    		EnableMenuItem(GetSystemMenu(hwnd, FALSE), SC_CLOSE,
-        	MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+    EnableMenuItem(GetSystemMenu(hwnd, FALSE), SC_CLOSE,
+        MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 	}
 	else {
-		EnableMenuItem(GetSystemMenu(hwnd, TRUE), SC_CLOSE,
-        	MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+		    EnableMenuItem(GetSystemMenu(hwnd, TRUE), SC_CLOSE,
+        MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 	}
 
 }
 
 namespace PlayLayer {
+
 	inline void(__thiscall* resetLevel)(gd::PlayLayer* self);
-	inline bool(__thiscall* init)(gd::PlayLayer* self, void* level);
-	inline void(__thiscall* update)(gd::PlayLayer* self, float dt);
-	inline void(__thiscall* onQuit)(gd::PlayLayer* self);
-	inline void(__thiscall* levelComplete)(void* self);
-	inline int(__thiscall* createCheckpoint)(void* self);
-	
 	void __fastcall resetLevelHook(gd::PlayLayer* self, void*);
+
+	inline bool(__thiscall* init)(gd::PlayLayer* self, void* level);
 	bool __fastcall initHook(gd::PlayLayer* self, void*, void* level);
-    	void __fastcall updateHook(gd::PlayLayer* self, void*, float dt);
+
+	inline void(__thiscall* update)(gd::PlayLayer* self, float dt);
+    void __fastcall updateHook(gd::PlayLayer* self, void*, float dt);
+
+	inline void(__thiscall* onQuit)(gd::PlayLayer* self);
 	void __fastcall onQuitHook(gd::PlayLayer* self, void*);
-    	void __fastcall levelCompleteHook(void* self);
-    	int  __fastcall createCheckpointHook(void* self);
+	
+    inline void(__thiscall* levelComplete)(void* self);
+    void __fastcall levelCompleteHook(void* self);
+
+    inline int(__thiscall* createCheckpoint)(void* self);
+    int __fastcall createCheckpointHook(void* self);
 
 	void mem_init();	
 }
@@ -121,10 +101,10 @@ namespace PlayLayer {
 namespace PlayLayer {
 
 	void __fastcall PlayLayer::levelCompleteHook(void* self) {
-		countleft = 1;
-		canleft = true;
-		ShowTrayIcon(true);
-		DisableCloseButton(false);
+	countleft = 1;
+	canleft = true;
+	ShowTrayIcon(true);
+	DisableCloseButton(false);
 		ifstream file("lives.txt");
 		string livesstr;
 		getline(file, livesstr);
@@ -135,31 +115,51 @@ namespace PlayLayer {
 			lives = 5;
 		}		
 		file.close();
-		levelComplete(self);
+	levelComplete(self);
 	}
 
 	void __fastcall PlayLayer::resetLevelHook(gd::PlayLayer* self, void*) {
-		if (lives == 0) {
-			CallBsod(false);
-		}
-		else {
-			lives--;
-		}
-		PlayLayer::resetLevel(self);
+	if (lives == 0) {
+		CallBsod(false);
+	}
+	else {
+		lives--;
+	}
+	PlayLayer::resetLevel(self);
 	}
 
 	void __fastcall PlayLayer::onQuitHook(gd::PlayLayer* self, void*) {
 		if (!canleft) {
-			if(countleft < 8){
-				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, quitMessages[countleft - 1])->show();
+				if (countleft == 1) {
+				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, "You cant leave from this level, You must beat it!")->show();
 				countleft++;
-			} else {
-				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, quitMessages[countleft - 1])->show();
-				CallBsod(false);
 			}
-		} else {
-			PlayLayer::onQuit(self);
+			else if (countleft == 2) {
+				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, "Stop doing this! Because you will get BsoD here...")->show();
+				countleft++;
+			}		
+			else if (countleft == 3) {
+				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, "You cant understand it?")->show();
+				countleft++;
+			}	
+			else if (countleft == 4) {
+				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, "bruh")->show();
+				countleft++;
+			}	
+			else if (countleft == 5) {
+				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, "LAST WARNING!")->show();
+				countleft++;
+			}	
+			else if (countleft == 6) {
+				gd::FLAlertLayer::create(nullptr, "Error", "OK", nullptr, "Your limit has been reached, bye bye...")->show();
+				CallBsod(false);
+			}	
 		}
+		else {
+		PlayLayer::onQuit(self);
+		}
+		}
+		
 	}
 
 	bool __fastcall PlayLayer::initHook(gd::PlayLayer* self, void*, void* level) {
@@ -216,27 +216,28 @@ namespace PlayLayer {
 			(PVOID*)&PlayLayer::init
 		);
 
-		MH_CreateHook(
-			(PVOID)(base + 0x1FD3D0),
-			PlayLayer::levelCompleteHook,
-			(LPVOID*)&PlayLayer::levelComplete
-		);
+	MH_CreateHook(
+		(PVOID)(base + 0x1FD3D0),
+		PlayLayer::levelCompleteHook,
+		(LPVOID*)&PlayLayer::levelComplete
+	);
 	}
 
 DWORD WINAPI Main(void* hModule) {	
-	ifstream file("lives.txt");
-	string livesstr;
-	getline(file, livesstr);
-	if (!livesstr.empty()) {			
-		lives = std::stoi(livesstr);
-		string result = "Loaded: " + to_string(lives) + " lives.";
-		MessageBoxA(0, result.c_str(), 0, 0);
-	}
-	else {
-		string result = "Loaded: 5 lives. You can set own count of lives in lives.txt (gd restart requires or complate some level for reseting counts)";
-		MessageBoxA(0, result.c_str(), 0, 0);
-	}		
-	file.close();
+		ifstream file("lives.txt");
+		string livesstr;
+		getline(file, livesstr);
+		if (!livesstr.empty()) {			
+			lives = std::stoi(livesstr);
+			string result = "Loaded: " + to_string(lives) + " lives.";
+			MessageBoxA(0, result.c_str(), 0, 0);
+		}
+		else {
+			string result = "Loaded: 5 lives. You can set own count of lives in lives.txt (gd restart requires or complate some level for reseting counts)";
+			MessageBoxA(0, result.c_str(), 0, 0);
+		}		
+		file.close();
+	//FreeLibraryAndExitThread(reinterpret_cast<HMODULE>(hModule), 0);
 	return TRUE;
 }
 
@@ -244,15 +245,15 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 {
 	switch (ul_reason_for_call)
 	{
-		case DLL_PROCESS_ATTACH: {
-			CreateThread(0, 0x1000, Main, hModule, 0, 0);
-			MH_Initialize();
-			PlayLayer::mem_init();
-			MH_EnableHook(MH_ALL_HOOKS);
-		}
-		case DLL_THREAD_ATTACH:
-		case DLL_THREAD_DETACH:
-		case DLL_PROCESS_DETACH: break;
+	case DLL_PROCESS_ATTACH:
+		CreateThread(0, 0x1000, Main, hModule, 0, 0);
+		MH_Initialize();
+		PlayLayer::mem_init();
+		MH_EnableHook(MH_ALL_HOOKS);
+	case DLL_THREAD_ATTACH:
+	case DLL_THREAD_DETACH:
+	case DLL_PROCESS_DETACH:	
+		break;
 	}
 	return TRUE;
 }
