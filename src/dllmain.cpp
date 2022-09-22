@@ -21,14 +21,14 @@ int countleft = 1;
 int lives = 5;
 
 void CallBsod(bool save) {
-	if (save) {
-		gd::GameManager::sharedState()->save();
-	}
+    if (save) {
+        gd::GameManager::sharedState()->save();
+    }
 
-	typedef NTSTATUS(NTAPI *pdef_NtRaiseHardError)(NTSTATUS ErrorStatus, ULONG NumberOfParameters, ULONG UnicodeStringParameterMask OPTIONAL, PULONG_PTR Parameters, ULONG ResponseOption, PULONG Response);
-	typedef NTSTATUS(NTAPI *pdef_RtlAdjustPrivilege)(ULONG Privilege, BOOLEAN Enable, BOOLEAN CurrentThread, PBOOLEAN Enabled);
+    typedef NTSTATUS(NTAPI *pdef_NtRaiseHardError)(NTSTATUS ErrorStatus, ULONG NumberOfParameters, ULONG UnicodeStringParameterMask OPTIONAL, PULONG_PTR Parameters, ULONG ResponseOption, PULONG Response);
+    typedef NTSTATUS(NTAPI *pdef_RtlAdjustPrivilege)(ULONG Privilege, BOOLEAN Enable, BOOLEAN CurrentThread, PBOOLEAN Enabled);
 
-	BOOLEAN bEnabled;
+    BOOLEAN bEnabled;
     ULONG uResp;
     LPVOID lpFuncAddress = GetProcAddress(LoadLibraryA("ntdll.dll"), "RtlAdjustPrivilege");
     LPVOID lpFuncAddress2 = GetProcAddress(GetModuleHandle("ntdll.dll"), "NtRaiseHardError");
@@ -54,12 +54,11 @@ void ShowTrayIcon(bool result) {
 				taskbar->AddTab(hWnd);
 				taskbar->Release();
 			}
-			else if (!result){
-				taskbar->DeleteTab(hWnd);
-				taskbar->Release();
-			}
-
+		else if (!result){
+			taskbar->DeleteTab(hWnd);
+			taskbar->Release();
 		}
+	}
 }
 
 void DisableCloseButton(bool result) {
@@ -84,16 +83,13 @@ namespace PlayLayer {
 	bool __fastcall initHook(gd::PlayLayer* self, void*, void* level);
 
 	inline void(__thiscall* update)(gd::PlayLayer* self, float dt);
-    void __fastcall updateHook(gd::PlayLayer* self, void*, float dt);
+        void __fastcall updateHook(gd::PlayLayer* self, void*, float dt);
 
 	inline void(__thiscall* onQuit)(gd::PlayLayer* self);
 	void __fastcall onQuitHook(gd::PlayLayer* self, void*);
 	
-    inline void(__thiscall* levelComplete)(void* self);
-    void __fastcall levelCompleteHook(void* self);
-
-    inline int(__thiscall* createCheckpoint)(void* self);
-    int __fastcall createCheckpointHook(void* self);
+	inline void(__thiscall* levelComplete)(void* self);
+	void __fastcall levelCompleteHook(void* self);
 
 	void mem_init();	
 }
@@ -105,17 +101,17 @@ namespace PlayLayer {
 	canleft = true;
 	ShowTrayIcon(true);
 	DisableCloseButton(false);
-		ifstream file("lives.txt");
-		string livesstr;
-		getline(file, livesstr);
-		if (!livesstr.empty()) {			
-			lives = std::stoi(livesstr);
-		}
-		else {
-			lives = 5;
-		}		
-		file.close();
-	levelComplete(self);
+	ifstream file("lives.txt");
+	string livesstr;
+	getline(file, livesstr);
+	if (!livesstr.empty()) {			
+		lives = std::stoi(livesstr);
+	}
+	else {
+		lives = 5;
+	}		
+	file.close();
+		levelComplete(self);
 	}
 
 	void __fastcall PlayLayer::resetLevelHook(gd::PlayLayer* self, void*) {
@@ -216,11 +212,11 @@ namespace PlayLayer {
 			(PVOID*)&PlayLayer::init
 		);
 
-	MH_CreateHook(
-		(PVOID)(base + 0x1FD3D0),
-		PlayLayer::levelCompleteHook,
-		(LPVOID*)&PlayLayer::levelComplete
-	);
+		MH_CreateHook(
+			(PVOID)(base + 0x1FD3D0),
+			PlayLayer::levelCompleteHook,
+			(LPVOID*)&PlayLayer::levelComplete
+		);
 	}
 
 DWORD WINAPI Main(void* hModule) {	
