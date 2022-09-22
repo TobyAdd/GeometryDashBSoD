@@ -1,2 +1,2 @@
 # GeometryDashBSoD
-Geometry Dash BSoD challenge.
+On death you will get bsod
